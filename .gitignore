@@ -9,3 +9,6 @@
 !.envs/base
 !.envs/local
 /static/
+.vscode
+venv
+.gitmessage
