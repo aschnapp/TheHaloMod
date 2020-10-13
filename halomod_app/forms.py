@@ -34,7 +34,7 @@ DEFAULT_MODEL = TracerHaloModel.get_all_parameter_defaults()
 
 
 class CosmoForm(ComponentModelForm):
-    choices = [
+    choices = [ #choices are associated with dropdowns
         ("Planck15", "Planck15"),
         ("Planck13", "Planck13"),
         ("WMAP9", "WMAP9"),
@@ -47,12 +47,12 @@ class CosmoForm(ComponentModelForm):
     module = hmf.cosmo
 
     add_fields = dict(
-        H0=forms.FloatField(
-            label=mark_safe("H<sub>0</sub>"),
-            initial=str(hmf.cosmo.Planck15.H0.value),
-            min_value=10,
-            max_value=500.0,
-            localize=True,
+        H0=forms.FloatField( #each field follows this pattern
+            label=mark_safe("H<sub>0</sub>"), #labels field; in this case the value is for H_0 (mark_safe cleans bad HTML) 
+            initial=str(hmf.cosmo.Planck15.H0.value), #initial value from hmf package (presumably constants tucked away in a base model)
+            min_value=10, #restricts minimum (this should be done client side using vue form validation)
+            max_value=500.0, #restructs maxmimum (see above)
+            localize=True, #depending on input might check different possible representations for the data (think all the different ways we can put date depending on where we are)
         ),
         Ob0=forms.FloatField(
             label=mark_safe("&#937<sub>b</sub>"),
@@ -406,11 +406,11 @@ class TracerHaloModelFramework(FrameworkForm):
         initial=str(DEFAULT_MODEL["force_1halo_turnover"]),
     )
 
-
+## This is the interesting bit
 class FrameworkInput(CompositeForm):
     """Input parameters to the overall framework."""
 
-    form_list = [
+    form_list = [ # List of everything we've seen up to this point (these are class names)
         CosmoForm,
         MassDefinitionForm,
         TransferForm,
@@ -444,14 +444,14 @@ class FrameworkInput(CompositeForm):
     ):
 
         self.current_models = current_models
-        self.derivative_model_label = model_label
-        if current_models:
-            self.derivative_model = current_models.get(model_label, None)
+        self.derivative_model_label = model_label 
+        if current_models: # do any models exist already?
+            self.derivative_model = current_models.get(model_label, None) # make a copy with new name
         else:
-            self.derivative_model = None
+            self.derivative_model = None # no derivative, just new
         self.edit = edit
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs) # calls CompositeForm constructor
 
         # Add form.modules to fields (useful for getting which ones are necessary)
         for form in self.forms:
@@ -465,7 +465,8 @@ class FrameworkInput(CompositeForm):
         if not edit and model_label:
             self.fields["label"].initial = model_label + "-new"
 
-        self.helper = FormHelper()
+        # this is actually getting HTML form going and styling it
+        self.helper = FormHelper() 
         self.helper.form_id = "input_form"
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
@@ -482,7 +483,7 @@ class FrameworkInput(CompositeForm):
             FilterForm: ("delta_c",),
             WDMForm: ("wdm_mass", WDMAlterForm),
         }
-        omit = [TransferFramework, MassFunctionFramework, WDMFramework, WDMAlterForm]
+        omit = [TransferFramework, MassFunctionFramework, WDMFramework, WDMAlterForm] #these forms are omitted initially; maybe conditional?
 
         print(
             self.forms[self.form_list.index(WDMAlterForm)]._layout().fields[-1].fields
@@ -508,7 +509,7 @@ class FrameworkInput(CompositeForm):
                 ),
                 css_class="row",
             ),
-            TabHolder(
+            TabHolder( #tab holds each form from form_list
                 *[
                     form._layout(
                         extra=[
@@ -537,7 +538,8 @@ class FrameworkInput(CompositeForm):
             raise forms.ValidationError("Label must be unique")
         return label
 
-    def clean(self):
+    # This method performs specific validations on form inputs
+    def clean(self): 
         """
         Clean the form for things that need to be cross-referenced between fields.
         """
@@ -575,6 +577,7 @@ class FrameworkInput(CompositeForm):
 
         return cleaned_data
 
+    # takes output of clean() and makes a dictionary out of it
     def cleaned_data_to_framework_dict(self, cleaned_data):
         # get all the _params out
         out = {}
@@ -637,7 +640,7 @@ class FrameworkInput(CompositeForm):
 
         return cls, out
 
-
+# Just another form that chooses what graphing scheme is needed
 class PlotChoice(forms.Form):
     plot_choices = [
         (
@@ -811,7 +814,7 @@ class PlotChoice(forms.Form):
         required=False,
     )
 
-
+# Contact form
 class ContactForm(forms.Form):
     name = forms.CharField(required=True)
     email = forms.EmailField(required=True)
@@ -823,7 +826,7 @@ class ContactForm(forms.Form):
         self.helper.add_input(Submit("submit", "Submit"))
         super().__init__(*args, **kwargs)
 
-
+# Error reporting form
 class UserErrorForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea)
     name = forms.CharField(required=False, label_suffix="optional")
