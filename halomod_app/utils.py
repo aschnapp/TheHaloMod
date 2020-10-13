@@ -3,8 +3,8 @@ import io
 import logging
 
 import matplotlib.ticker as tick
-from halomod import TracerHaloModel
-from halomod.wdm import HaloModelWDM
+from halomod import TracerHaloModel #TracerHaloModel class from halomod package
+from halomod.wdm import HaloModelWDM    # HaloModelWDM (Warm Dark Matter) model class from halomod package
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backends.backend_pdf import FigureCanvasPdf
 from matplotlib.backends.backend_svg import FigureCanvasSVG
@@ -14,12 +14,39 @@ import re
 
 logger = logging.getLogger(__name__)
 
-
+# Creates TracerHaloModel object OR HaloModelWDM (Warm Dark Matter) model from keyword agrument dictionary (created 
+# by method "cleaned_data_to_framework_dict" in forms.py)
+# 
+# RETURNS: HaloModel object
+#
+# Parameters for Tracer Halo Model: (from halomod package in file src/halomod/halo_model.py)
+#    ----------
+#    hod_model : str or :class:`~hod.HOD` subclass, optional
+#     A model for the halo occupation distribution.
+# hod_params : dict, optional
+#     Parameters for the HOD model.
+# tracer_profile_model : str or :class:`~profiles.Profile` subclass, optional
+#     A density profile model for the abundance of the tracer within haloes of a
+#     given mass.
+# tracer_profile_params : dict, optional
+#     Parameters for the tracer density profile model.
+# tracer_concentration_model : str or :class:`~concentration.CMRelation` subclass, optional
+#     A concentration-mass relation supporting the tracer profile.
+# tracer_concentration_params : dict, optional
+#     Parameters for the tracer CM relation.
+# tracer_density: float, optional
+#     Total density of the tracer, in the units specified by the HOD model. This
+#     can be used to set the minimum halo mass of the HOD.
+# force_1halo_turnover : bool, optional
+#     Whether to force the 1-halo term to turnover on large scales. THis induces a
+#     heuristic modification which ensures that the 1-halo term does not grow
+#     larger than the two-halo term on very large scales.
+#
 def hmf_driver(cls=TracerHaloModel, previous: [None, TracerHaloModel] = None, **kwargs):
     if previous is None:
-        return cls(**kwargs)
+        return cls(**kwargs)    #TracerHaloModel
     elif "wdm_model" in kwargs and not isinstance(previous, HaloModelWDM):
-        return HaloModelWDM(**kwargs)
+        return HaloModelWDM(**kwargs)   
     elif "wdm_model" not in kwargs and isinstance(previous, HaloModelWDM):
         return TracerHaloModel(**kwargs)
     else:
@@ -28,13 +55,20 @@ def hmf_driver(cls=TracerHaloModel, previous: [None, TracerHaloModel] = None, **
         # TODO: this is a hack, and should be fixed in hmf
         # we have to set all _params whose model has been changed to {}
         # so that they don't get carry-over parameters from other models.
+
+        # *_model parameters need to be the name of the class of the 
+        # corresponding model
         for k, v in kwargs.items():
             if k.endswith("model") and v != getattr(this, k).__class__.__name__:
                 this.update(**{k.replace("model", "params"): {}})
 
         return this
 
-
+# Creates plot for plotting halo model masses 
+# objects = model(s) to plot (TracerHaloModel)
+# q = plot type
+# d = key map dictionary used to map x and y quantities against each other (see KEY MAP dictionary defined in this file)
+# plot_format = plot format file type ["png", "svg", "pdf", "zip"]
 def create_canvas(objects, q: str, d: dict, plot_format: str = "png"):
     # TODO: make log scaling automatic
     fig = Figure(figsize=(10, 6), edgecolor="white", facecolor="white", dpi=100)
@@ -60,10 +94,13 @@ def create_canvas(objects, q: str, d: dict, plot_format: str = "png"):
 
     errors = {}
     ys = {}
+
+    #Iterate through each models needed to plot
+    # l = model name, o = model object
     for i, (l, o) in enumerate(objects.items()):
         if not compare:
             try:
-                y = getattr(o, q)
+                y = getattr(o, q)   # get value of quanityt (plot type) for model object
                 mask = y > 1e-40 * y.max()
                 ys[l] = y[mask]
                 if y is not None:
@@ -118,6 +155,7 @@ def create_canvas(objects, q: str, d: dict, plot_format: str = "png"):
 
         buf = io.BytesIO()
 
+        ###plot format based on file type
         if plot_format == "pdf":
             FigureCanvasPdf(fig).print_pdf(buf)
         elif plot_format == "png":
@@ -141,6 +179,7 @@ KHMLABEL = r"Fourier Scale, $k$ [$h$/Mpc]"
 
 XLABELS = {"m": MLABEL, "k": KLABEL, "r": RLABEL, "k_hm": KHMLABEL}
 
+# Mapping for different Mass Function axis
 KEYMAP = {
     "dndm": {
         "xlab": MLABEL,
