@@ -29,6 +29,8 @@ class RangeSlider(forms.TextInput):
         self.step = str(step)
         self.elem_name = str(elem_name)
 
+    # input string: x - y
+    # output string: [ x,y ] or uses class defined min and max
     def get_initial(self, val):
         try:
             rg = val.split(" - ")
@@ -36,6 +38,23 @@ class RangeSlider(forms.TextInput):
         except IndexError:
             return """[ """ + self.minimum + """,""" + self.maximum + """ ]"""
 
+    # Renders HTML for Slider, the slider is surrenlty not editable
+    # Example data:
+    """<div id="slider-range-lnk_range"></div> <script>
+        $('#id_lnk_range').attr("readonly", true)
+        $( "#slider-range-lnk_range" ).slider({
+        range: true,
+        min: -23.025850929940457,
+        max: 14.508657738524219,
+        step: 0.1,
+        values: [ -18.420680743952367,9.903487552536127 ],
+        slide: function( event, ui ) {
+          $( "#id_lnk_range" ).val("  "+ ui.values[ 0 ] + " - " + ui.values[ 1 ] );
+        }
+        });
+        $( "#id_lnk_range" ).val("  "+ $( "#slider-range-lnk_range" ).slider( "values", 0 ) +
+        " - " + $( "#slider-range-lnk_range" ).slider( "values", 1 ) );
+    </script>"""
     def render(self, name, value, attrs=None, renderer=None):
 
         s = super(RangeSlider, self).render(name, value, attrs)
@@ -100,6 +119,8 @@ class FloatListField(forms.CharField):
         self.min_val, self.max_val = min_value, max_value
         super(FloatListField, self).__init__(*args, **kwargs)
 
+    # parameters: value = "x,y,z"
+    # This verifies the values are floats and is within the min and max
     def clean(self, value):
         value = self.to_python(value)
         self.validate(value)
@@ -125,7 +146,9 @@ class FloatListField(forms.CharField):
 
         return final_list
 
-
+# Wraps the RangeSlider class using the Django form class, CharField
+# Inherits super class 'clean' and provides custom formatting for the return value
+# Reference: https://docs.djangoproject.com/en/3.1/ref/models/instances/#django.db.models.Model.clean
 class RangeSliderField(forms.CharField):
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop("name", "")
@@ -195,7 +218,9 @@ class CompositeForm(forms.Form):
         for form in self.forms:
             _errors.extend(form.non_field_errors())
         return _errors
-
+    
+    # Inherits super class 'full_clean'
+    # Reference: https://docs.djangoproject.com/en/3.1/ref/models/instances/#django.db.models.Model.full_clean
     def full_clean(self):
         super().full_clean()
 
@@ -267,7 +292,8 @@ class ComponentModelForm(forms.Form):
             self.fields[name] = field
             self.fields[name].component = self.kind
             self.fields[name].paramname = fieldname
-
+    
+    # Calculates table sizing using row and col size
     def _process_extras(self, extra: list) -> Div:
         """Prepend extra fields to those inherently in the model."""
         # Make it three column
@@ -285,6 +311,7 @@ class ComponentModelForm(forms.Form):
             row.append(col)
         return row
 
+    # Defines current tabs and populates div fields
     def _layout(self, extra=[], appended_rows=[]):
 
         extra_row = self._process_extras(extra)
@@ -309,6 +336,12 @@ class ComponentModelForm(forms.Form):
             tab.append(row)
         return tab
 
+    # Sets the defualts to the form data
+    # Defaults are set by:
+    # name = {self.kind}_{model}_{key}
+    # self.fields[name].component = self.kind
+    # self.fields[name].model = model
+    # self.fields[name].paramname = key
     def _add_default_model(self, model):
         # Allow a "None" class
         if model == "None" or model is None:
@@ -344,6 +377,7 @@ class ComponentModelForm(forms.Form):
             self.fields[name].model = model
             self.fields[name].paramname = key
 
+    # returns a list of Div classes 
     def _get_model_param_divs(self):
         param_div = Div(css_class="col-4")
         for name, field in self.fields.items():
