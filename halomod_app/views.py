@@ -31,6 +31,7 @@ class BaseTab(TabView):
     top = True
 
 
+# Class for ABOUT view (top navigation bar/ toolbar)
 class about(BaseTab):
     """
     The home-page. Should just be simple html with links to what to do.
@@ -41,7 +42,7 @@ class about(BaseTab):
     tab_id = "/about/"
     tab_label = "About"
 
-
+# Class for HELP view (top navigation bar/ toolbar)
 class help(BaseTab):
     """
     A simple html 'end-page' which shows information about parameters used.
@@ -52,7 +53,8 @@ class help(BaseTab):
     tab_label = "Help"
     template_name = "help.html"
 
-
+# Calculator "Base" class for CalculatorInputCreate
+# 
 class CalculatorInputBase(FormView):
     """The form for input."""
 
@@ -75,8 +77,13 @@ class CalculatorInputBase(FormView):
 
         return super().form_valid(form)
 
-
+# Main view for Creating/Calculating a new model
+# Descends/Inherits from CalculatorInputBase
+# This is the view displayed when "+ New Model" is selected from home
+# corresponds to "/create" endpoint
 class CalculatorInputCreate(CalculatorInputBase):
+
+    # gets the CalculatorInputBase key word arguments
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         prev_label = self.kwargs.get("label", None)
@@ -90,7 +97,9 @@ class CalculatorInputCreate(CalculatorInputBase):
         )
         return kwargs
 
-
+# View for Editing an already Existing Model
+# Performs validation for all arguments modified
+# corresponds to /edit/<model_label> endpoint
 class CalculatorInputEdit(CalculatorInputCreate):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -143,7 +152,8 @@ class CalculatorInputEdit(CalculatorInputCreate):
 
         return result
 
-
+# Deletes a model object, including it's plot and associated forms
+# Corresponds to: /delete/<model_label> endpoint
 def delete_plot(request, label):
     if len(request.session.get("objects", {})) > 1:
 
@@ -164,7 +174,7 @@ def delete_plot(request, label):
 
     return HttpResponseRedirect("/")
 
-
+# Delets all models and forms
 def complete_reset(request):
     try:
         del request.session["objects"]
@@ -175,7 +185,8 @@ def complete_reset(request):
 
     return HttpResponseRedirect("/")
 
-
+# Main view for all model plots
+# This is the default view on the home page
 class ViewPlots(BaseTab):
     def get(self, request, *args, **kwargs):
         # Create a default TracerHaloModel object that displays upon opening.
@@ -186,7 +197,7 @@ class ViewPlots(BaseTab):
             request.session["forms"] = OrderedDict()
             request.session["model_errors"] = OrderedDict()
 
-        self.form = forms.PlotChoice(request)
+        self.form = forms.PlotChoice(request)   # The Plot choice drop down on the home page
 
         self.warnings = ""  # request.session['warnings']
 
@@ -210,7 +221,10 @@ class ViewPlots(BaseTab):
     tab_label = "Calculator"
     top = True
 
-
+# function that generates the plot according to the filetype requested
+# corresponds to "/plot/<plot_type>.<file_type>" endpoint
+# NOTE: I think you need to manually navigate to this endpoint, it doesn't
+#       route from any buttons in other views. 
 def plots(request, filetype, plottype):
     """
     Chooses the type of plot needed and the filetype (pdf or png) and outputs it
@@ -280,7 +294,8 @@ def plots(request, filetype, plottype):
 
     return response
 
-
+# Function that outputs all model parameters to a .txt file
+# corresponds to "download/parameters.txt" endpoint
 def header_txt(request):
     # Open up file-like objects for response
     response = HttpResponse(content_type="application/zip")
@@ -291,6 +306,8 @@ def header_txt(request):
     # Import all the input form data so it can be written to file
     objects = request.session["objects"]
 
+    # iterates through all model obejcts in this session, and writes
+    # out parameters to file
     for i, (label, o) in enumerate(objects.items()):
         s = io.BytesIO()
         s.write(toml.dumps(framework_to_dict(o)).encode())
@@ -304,7 +321,8 @@ def header_txt(request):
     response.write(ret_zip)
     return response
 
-
+# Function to output all ASCII data to zip file
+# corresponds to the "download/allData.zip" endpoint
 def data_output(request):
     # TODO: output HDF5 format
     # Import all the data we need
@@ -358,7 +376,8 @@ def data_output(request):
     response.write(ret_zip)
     return response
 
-
+# Function to output HALO-gen ready input (not sure what HALO-gen is... must be some tool?)
+# corresponds to "/download/halogen.zip" endpoint
 def halogen(request):
     # Import all the data we need
     objects = request.session["objects"]
@@ -397,10 +416,12 @@ def halogen(request):
     response.write(ret_zip)
     return response
 
-
+# View for the Contact section
+# corresponds to "/contact/" endpoint (email icon on navbar)
+# provides email information form
 class ContactFormView(FormView):
     form_class = forms.ContactForm
-    template_name = "email_form.html"
+    template_name = "email_form.html"   
     success_url = "/email-sent/"
 
     def form_valid(self, form):
@@ -438,7 +459,8 @@ def get_code(request, name):
         response["Content-Disposition"] = "attachment;filename=" + name
         return response
 
-
+# View for Error/Issue Reporting
+# corresponds to "/report" AND "/report/<model_name>" endpoints
 class UserErrorReport(FormView):
     form_class = forms.UserErrorForm
     template_name = "user_error_form.html"
